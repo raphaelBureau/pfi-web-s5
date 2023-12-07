@@ -18,54 +18,62 @@ function saveContentScrollPosition () {
 function restoreContentScrollPosition () {
   $('#content')[0].scrollTop = contentScrollPosition
 }
-function updateHeader (text = '', privilegeLevel = 0, loggedUser = {Id:1,Avatar:"PhotosManager/images/no-avatar.png"}) {
+function RenderHeader (text = "default", name = "default") {
+  let currentUser = API.retrieveLoggedUser()
   //privilege 0 = anonyme, 1=user, 2=admin
-  $('#content').append(
+  $('#header').empty()
+  $('#header').append(
     $(`
-        <div id="header">
-<span title="Liste des photos" id="listPhotosCmd">
-<img src="PhotosManager/images/PhotoCloudLogo.png" class="appLogo">
-</span>
-<span class="viewTitle">${text}
-<div class="cmdIcon fa fa-plus" id="newPhotoCmd" title="Ajouter une photo"></div>
-</span>
-<div class="headerMenusContainer">
-<span>&nbsp;</span> <!--filler-->
-<i title="Modifier votre profil">
-<div class="UserAvatarSmall" userid="${loggedUser.Id}" id="editProfilCmd"
-style="background-image:url('${loggedUser.Avatar}')"
-title="Nicolas Chourot"></div>
-</i>
-<div class="dropdown ms-auto dropdownLayout">
-<div data-bs-toggle="dropdown" aria-expanded="false">
-<i class="cmdIcon fa fa-ellipsis-vertical"></i>
-</div>
-<div class="dropdown-menu noselect"></div></div></div>`));
+    <span title="${text}" id="${name + "cmd"}">
+        <img src="PhotosManager/images/PhotoCloudLogo.png" class="appLogo">
+    </span>
+    <span class="viewTitle">${text}
+        ${text == "Liste des photos" ? '<div class="cmdIcon fa fa-plus" id="newPhotoCmd" title="Ajouter une photo"></div>' : ""}
+    </span>
+    <div class="headerMenusContainer">
+        <span>&nbsp;</span> <!--filler-->
+        <i title="Modifier votre profil">
+            <div class="UserAvatarSmall" id="editProfilCmd"
+                style="background-image:url('${currentUser === null? "" : currentUser.Avatar}')"
+                title="${currentUser === null? "" : currentUser.Name}">
+            </div>
+        </i>
+        <div data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="cmdIcon fa fa-ellipsis-vertical"></i>
+        </div>
+        <div class="dropdown-menu noselect">
+<!--                    <div class="dropdown-divider"></div>-->
+        </div>
+    </div>
+`));
 
-if(privilegeLevel >= 2) {
+if(currentUser !== null && currentUser.Authorizations.writeAccess === 2) {
 $('.dropdown-menu').append($(`
 <span class="dropdown-item" id="manageUserCm">
 <i class="menuIcon fas fa-user-cog mx-2"></i>
 Gestion des usagers
 </span>`));}
 
-if(privilegeLevel >= 1) {
+if(currentUser !== null) {
 $('.dropdown-menu').append($(`
 <div class="dropdown-divider"></div>
-<span class="dropdown-item" id="logoutCmd">
+<span class="dropdown-item" id="logoutCmd" onlcick="() => {
+  API.logout().then(() => {
+      renderConnexion()
+  })">
 <i class="menuIcon fa fa-sign-out mx-2"></i>
 Déconnexion
 </span>`));}
 
-if(privilegeLevel <= 0) {
+if(currentUser === null) {
 $('.dropdown-menu').append($(`
 <div class="dropdown-divider"></div>
-<span class="dropdown-item" id="loginCmd">
+<span class="dropdown-item" id="loginCmd" onclick="renderLoginForm()">
 <i class="menuIcon fa fa-sign-out mx-2"></i>
 Connexion
 </span>`));}
 
-if(privilegeLevel >= 1) {
+if(currentUser !== null) {
 $('.dropdown-menu').append($(`
 <span class="dropdown-item" id="editProfilMenuCmd">
 <i class="menuIcon fa fa-user-edit mx-2"></i>
@@ -105,16 +113,16 @@ Mes photos
 
 $('.dropdown-menu').append($(`
 <div class="dropdown-divider"></div>
-<span class="dropdown-item" id="aboutCmd">
+<span class="dropdown-item" id="aboutCmd" onclick="renderAbout()">
 <i class="menuIcon fa fa-info-circle mx-2"></i>
 À propos...
 </span>`));
 }
-function renderAbout () {
+function renderAbout() {
   timeout()
   saveContentScrollPosition()
   eraseContent()
-  UpdateHeader('À propos...', 'about')
+  RenderHeader('À propos...', 'propos')
 
   $('#content').append(
     $(`
@@ -132,8 +140,7 @@ function renderAbout () {
                     Collège Lionel-Groulx, automne 2023
                 </p>
             </div>
-        `)
-  )
+        `));
 }
 function renderLoginForm (
   loginMessage = '',
@@ -141,13 +148,13 @@ function renderLoginForm (
   EmailError = '',
   passwordError = ''
 ) {
-  saveContentScrollPosition()
-  eraseContent()
-  UpdateHeader('Se connecter', 'login')
+  saveContentScrollPosition();
+  eraseContent();
+  RenderHeader('Se connecter', 'login');
 
   $('#content').append(
     $(`
-        div class="content" style="text-align:center">
+        <div class="content" style="text-align:center">
         <h3>${loginMessage}</h3>
         <form class="form" id="loginForm">
         <input type='email'
@@ -170,21 +177,20 @@ function renderLoginForm (
         </form>
         <div class="form">
         <hr>
-        <button class="form-control btn-info" id="createProfilCmd">Nouveau compte</button>
+        <button class="form-control btn-info" id="createProfilCmd" onclick="renderUserCreationForm()">Nouveau compte</button>
         </div>
         </div>
-        `)
-  )
+        `));
 }
-function renderUserCreationForm () {
+function renderUserCreationForm() {
   noTimeout()
   saveContentScrollPosition()
   eraseContent()
-  UpdateHeader('Inscription', 'register')
+  RenderHeader('Inscription', 'register')
 
   $('#content').append(
     $(`
-        form class="form" id="createProfilForm"'>
+        <form class="form" id="createProfilForm"'>
         <fieldset>
         <legend>Adresse ce courriel</legend>
         <input type="email"
@@ -247,18 +253,18 @@ function renderUserCreationForm () {
         <input type='submit' name='submit' id='saveUserCmd' value="Enregistrer" class="form-control btn-primary">
         </form>
         <div class="cancel">
-        <button class="form-control btn-secondary" id="abortCmd">Annuler</button>
+        <button class="form-control btn-secondary" id="abortCmd" onclick="renderLoginForm()">Annuler</button>
         </div>
         `)
   )
 }
-function renderProfil () {
+function renderProfil() {
   saveContentScrollPosition()
   eraseContent()
-  UpdateHeader('Profil', 'profil')
+  RenderHeader('Profil', 'profil')
   $('#content').append(
     $(`
-        form class="form" id="editProfilForm"'>
+        <form class="form" id="editProfilForm"'>
         <input type="hidden" name="Id" id="Id" value="${loggedUser.Id}"/>
         <fieldset>
         <legend>Adresse ce courriel</legend>
