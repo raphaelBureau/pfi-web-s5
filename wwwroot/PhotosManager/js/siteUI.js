@@ -292,6 +292,8 @@ function renderUserCreationForm() {
   )
   initFormValidation();
   initImageUploaders();
+
+  addConflictValidation(API.checkConflictURL(), 'Email', "saveUser");
   $("#createProfilForm").on("submit", (event) => {
     let valForm = {};
     var formData = $('#createProfilForm').serializeArray();
@@ -385,7 +387,7 @@ function renderProfil() {
         </div>
         <div class="cancel"> <hr>
         <a href="confirmDeleteProfil.php">
-        <button onclick="" class="form-control btn-warning">Effacer le compte</button>
+        <button id="deleteUser" class="form-control btn-warning">Effacer le compte</button>
         </a>
         </div>
         `)
@@ -405,5 +407,31 @@ function renderProfil() {
     API.modifyUserProfil(valForm);
     // render photo
     // delete user
+  });
+  $("#deleteUser").on("click", () => {
+      let loggedUser = API.retrieveLoggedUser();
+      eraseContent();
+      updateHeader("Retrait de compte", "Retrait de compte");
+      timeout();
+      $("#content").append(`
+            <div class="viewTitle" style="text-align: center">Voulez-vous vraiment effacer votre compte?</div> 
+            <form class="userDeleteForm">
+                <input  type='submit' name='submit' value="Effacer mon compte" class="form-control btn-danger userDeleteForm">
+            </form>
+            <div class="userDeleteForm">
+                <button class="form-control btn-secondary" id="cancelCmd">Annuler</button>
+            </div>
+        `);
+      $(".userDeleteForm").submit(async (event) => {
+        event.preventDefault()
+        let res = await API.unsubscribeAccount(loggedUser.Id);
+        if(res){
+          API.logout();
+          renderLoginForm();
+        }
+      })
+      $("#cancelCmd").click(() => {
+        renderProfil();
+      });
   });
 }
