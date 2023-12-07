@@ -57,7 +57,7 @@ Gestion des usagers
 if(currentUser !== null) {
 $('.dropdown-menu').append($(`
 <div class="dropdown-divider"></div>
-<span class="dropdown-item" id="logoutCmd" onlcick="() => {
+<span class="dropdown-item" id="logoutCmd" onclick="() => {
   API.logout().then(() => {
       renderConnexion()
   })">
@@ -165,14 +165,14 @@ function renderLoginForm (
         InvalidMessage = 'Courriel invalide'
         placeholder="adresse de courriel"
         value='${Email}'>
-        <span style='color:red'>${EmailError}</span>
+        <span id="emailError" style='color:red'>${EmailError}</span>
         <input type='password'
         name='Password'
         placeholder='Mot de passe'
         class="form-control"
         required
         RequireMessage = 'Veuillez entrer votre mot de passe'>
-        <span style='color:red'>${passwordError}</span>
+        <span id="passwordError" style='color:red'>${passwordError}</span>
         <input type='submit' name='submit' value="Entrer" class="form-control btn-primary">
         </form>
         <div class="form">
@@ -181,6 +181,39 @@ function renderLoginForm (
         </div>
         </div>
         `));
+        initFormValidation();
+        $("#loginForm").on("submit", async (event) => {
+          let valForm = {};
+          var formData = $('#loginForm').serializeArray();
+          $.each(formData, function() {
+            valForm[this.name] = this.value;
+          });
+          event.preventDefault();
+          showWaitingGif();
+          let val = await API.login(valForm.Email, valForm.Password);
+
+          if (API.error) {
+            if (API.currentStatus == 481) {
+              console.log(API.currentHttpError);
+              $("#emailError").text(API.currentHttpError);
+            }
+            if (API.currentStatus == 482) {
+              console.log(API.currentHttpError);
+              $("#passwordError").text(API.currentHttpError);
+            } else {
+              console.log("server side error");
+            }
+          } else {
+            if (API.retrieveLoggedUser().VerifyCode !== "verified") {
+              // display verification
+            } else {
+              // display des photos...
+              renderProfil(); // pour l'instant on display le profil
+              console.log("log in");
+            }
+          }
+          
+        });
 }
 function renderUserCreationForm() {
   noTimeout()
@@ -257,6 +290,21 @@ function renderUserCreationForm() {
         </div>
         `)
   )
+  initFormValidation();
+  initImageUploaders();
+  $("#createProfilForm").on("submit", (event) => {
+    let valForm = {};
+    var formData = $('#createProfilForm').serializeArray();
+    $.each(formData, function() {
+      valForm[this.name] = this.value;
+    });
+    delete valForm.matchedEmail;
+    delete valForm.matchedPassword;
+    event.preventDefault();
+    showWaitingGif();
+    API.register(valForm);
+    renderLoginForm("Votre compte a été créé. Veuillez prendre vos courriels pour récupérer votre code de vérification qui vous sera demandé lors de votre prochaine connexion");
+  });
 }
 function renderProfil() {
   saveContentScrollPosition()
@@ -337,9 +385,25 @@ function renderProfil() {
         </div>
         <div class="cancel"> <hr>
         <a href="confirmDeleteProfil.php">
-        <button class="form-control btn-warning">Effacer le compte</button>
+        <button onclick="" class="form-control btn-warning">Effacer le compte</button>
         </a>
         </div>
         `)
   )
+  initFormValidation();
+  initImageUploaders();
+  $("#editProfilForm").on("submit", (event) => {
+    let valForm = {};
+    var formData = $('#editProfilForm').serializeArray();
+    $.each(formData, function() {
+      valForm[this.name] = this.value;
+    });
+    delete valForm.matchedEmail;
+    delete valForm.matchedPassword;
+    event.preventDefault();
+    showWaitingGif();
+    API.modifyUserProfil(valForm);
+    // render photo
+    // delete user
+  });
 }
