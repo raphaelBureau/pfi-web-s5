@@ -353,8 +353,33 @@ async function renderPhotos() {
     }
 }
 async function renderPhotosList() {
+    let loggedUser = API.retrieveLoggedUser();
     eraseContent();
     $("#content").append("<h2> En contruction </h2>");
+}
+async function renderPhoto() { //render single photo with info text, fa-regular fa-thumb-up when user hasnt liked photo, fa fa-thumb-up when liked
+    let loggedUser = API.retrieveLoggedUser();
+    timeout();
+    showWaitingGif();
+    UpdateHeader('Liste des photos', 'photosList')
+}
+async function renderCreatePhoto() { 
+    let loggedUser = API.retrieveLoggedUser();
+    timeout();
+    showWaitingGif();
+    UpdateHeader('Ajout de photos', 'photosList')
+}
+async function renderModifyPhoto() { 
+    let loggedUser = API.retrieveLoggedUser();
+    timeout();
+    showWaitingGif();
+    UpdateHeader('Modification de photo', 'photosList')
+}
+async function renderDeletePhoto() { 
+    let loggedUser = API.retrieveLoggedUser();
+    timeout();
+    showWaitingGif();
+    UpdateHeader('Retrait de photo', 'photosList')
 }
 function renderVerify() {
     eraseContent();
