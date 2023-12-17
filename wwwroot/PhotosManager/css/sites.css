@@ -45,7 +45,9 @@
     align-items: center;
     padding: 8px;
 }
-
+#customHeader {
+    display:none;
+}
 .headerMenusContainer {
     display:grid;
     grid-template-columns: auto 50px 30px;
@@ -60,7 +62,7 @@
     overflow-y: auto;
     scrollbar-width: thin;
     scrollbar-gutter: stable;
-    scroll-snap-type: y mandatory;
+   /* scroll-snap-type: y;*/
     background-color: white;
     padding-bottom: 8px;
 }
@@ -247,4 +249,19 @@ legend {
 
 div2{
     border: 1px solid red;
+}
+
+.userSelector {
+    max-width: 412px !important;
+}
+
+.searchContainer {
+    max-width: 412px;
+    display: grid;
+    grid-template-columns: auto 40px;
+    align-items: top !important;
+}
+.searchContainer input {
+    margin-bottom: 0px !important;
+    margin-top: 0px !important;
 }

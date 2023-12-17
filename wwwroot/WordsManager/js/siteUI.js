@@ -111,7 +111,6 @@ async function renderWords(refresh = false) {
                     console.log($("#content").scrollTop())
                     if ($("#content").scrollTop() + $("#content").innerHeight() > ($("#wordsList").height() - rowHeight)) {
                         offset++;
-                        console.log(offset);
                         renderWords();
                     }
                 });

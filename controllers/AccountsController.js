@@ -1,4 +1,5 @@
 import UserModel from '../models/user.js';
+import TokenModel from '../models/token.js';
 import Repository from '../models/repository.js';
 import TokenManager from '../tokensManager.js';
 import * as utilities from "../utilities.js";
@@ -9,6 +10,7 @@ import Authorizations from '../authorizations.js';
 export default class AccountsController extends Controller {
     constructor(HttpContext) {
         super(HttpContext, new Repository(new UserModel()), Authorizations.admin());
+        this.tokensRepository = new Repository(new TokenModel());
     }
     index(id) {
         if (id != undefined) {
@@ -18,7 +20,7 @@ export default class AccountsController extends Controller {
                 this.HttpContext.response.unAuthorized("Unauthorized access");
         }
         else {
-            if (Authorizations.readGranted(this.HttpContext, Authorizations.admin()))
+            if (Authorizations.granted(this.HttpContext, Authorizations.admin()))
                 this.HttpContext.response.JSON(this.repository.getAll(this.HttpContext.path.params), this.repository.ETag, true, Authorizations.admin());
             else
                 this.HttpContext.response.unAuthorized("Unauthorized access");
@@ -65,6 +67,7 @@ export default class AccountsController extends Controller {
         const gmail = new Gmail();
         gmail.send(user.Email, 'Vérification de courriel...', html);
     }
+
     sendConfirmedEmail(user) {
         let html = `
                 Bonjour ${user.Name}, <br /> <br />
@@ -73,6 +76,7 @@ export default class AccountsController extends Controller {
         const gmail = new Gmail();
         gmail.send(user.Email, 'Courriel confirmé...', html);
     }
+
     //GET : /accounts/verify?id=...&code=.....
     verify() {
         if (this.repository != null) {
@@ -111,15 +115,18 @@ export default class AccountsController extends Controller {
         } else
             this.HttpContext.response.updated(false);
     }
+
     // POST: account/register body payload[{"Id": 0, "Name": "...", "Email": "...", "Password": "..."}]
     register(user) {
         if (this.repository != null) {
             user.Created = utilities.nowInSeconds();
-            user.VerifyCode = utilities.makeVerifyCode(6);
+            let verifyCode = utilities.makeVerifyCode(6);
+            user.VerifyCode = verifyCode;
             user.Authorizations = Authorizations.user();
             let newUser = this.repository.add(user);
             if (this.repository.model.state.isValid) {
                 this.HttpContext.response.created(newUser);
+                newUser.Verifycode = verifyCode;
                 this.sendVerificationEmail(newUser);
             } else {
                 if (this.repository.model.state.inConflict)
@@ -127,6 +134,32 @@ export default class AccountsController extends Controller {
                 else
                     this.HttpContext.response.badRequest(this.repository.model.state.errors);
             }
+        } else
+            this.HttpContext.response.notImplemented();
+    }
+    promote(user) {
+        if (this.repository != null) {
+            let foundUser = this.repository.findByField("Id", user.Id);
+            foundUser.Authorizations.readAccess = foundUser.Authorizations.readAccess == 1 ? 2 : 1;
+            foundUser.Authorizations.writeAccess = foundUser.Authorizations.writeAccess == 1 ? 2 : 1;
+            let updatedUser = this.repository.update(user.Id, foundUser);
+            if (this.repository.model.state.isValid)
+                this.HttpContext.response.updated(updatedUser);
+            else
+                this.HttpContext.response.badRequest(this.repository.model.state.errors);
+        } else
+            this.HttpContext.response.notImplemented();
+    }
+    block(user) {
+        if (this.repository != null) {
+            let foundUser = this.repository.findByField("Id", user.Id);
+            foundUser.Authorizations.readAccess = foundUser.Authorizations.readAccess == 1 ? -1 : 1;
+            foundUser.Authorizations.writeAccess = foundUser.Authorizations.writeAccess == 1 ? -1 : 1;
+            let updatedUser = this.repository.update(user.Id, foundUser);
+            if (this.repository.model.state.isValid)
+                this.HttpContext.response.updated(updatedUser);
+            else
+                this.HttpContext.response.badRequest(this.repository.model.state.errors);
         } else
             this.HttpContext.response.notImplemented();
     }
@@ -139,14 +172,14 @@ export default class AccountsController extends Controller {
                 let foundedUser = this.repository.findByField("Id", user.Id);
                 if (foundedUser != null) {
                     user.Authorizations = foundedUser.Authorizations; // user cannot change its own authorizations
-                    user.VerifyCode = foundedUser.VerifyCode;
                     if (user.Password == '') { // password not changed
                         user.Password = foundedUser.Password;
                     }
-                    user.Authorizations = foundedUser.Authorizations;
                     if (user.Email != foundedUser.Email) {
                         user.VerifyCode = utilities.makeVerifyCode(6);
                         this.sendVerificationEmail(user);
+                    } else {
+                        user.VerifyCode = foundedUser.VerifyCode;
                     }
                     let updatedUser = this.repository.update(user.Id, user);
                     if (this.repository.model.state.isValid) {

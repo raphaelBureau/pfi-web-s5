@@ -1,8 +1,11 @@
+
+
+
 ////////////////////////////////////////////// API photos_APIs call ///////////////////////////////////////////////////////
 
 const serverHost = "http://localhost:5000";
 const photos_API = "/api/photos";
-
+const photoLikes_API = "/api/photolikes";
 class API {
     static initHttpState() {
         this.currentHttpError = "";
@@ -79,6 +82,32 @@ class API {
             });
         });
     }
+    static PromoteUser(UserId) {
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + "/accounts/promote",
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Id: UserId }),
+                success: () => { resolve(true); },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
+    static BlockUser(UserId) {
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + "/accounts/block",
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Id: UserId }),
+                success: () => { resolve(true); },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
     static login(Email, Password) {
         API.initHttpState();
         return new Promise(resolve => {
@@ -150,6 +179,22 @@ class API {
         return new Promise(resolve => {
             $.ajax({
                 url: serverHost + "/accounts",
+                contentType: 'application/json',
+                type: 'GET',
+                headers: API.getBearerAuthorizationToken(),
+                success: (data, status, xhr) => {
+                    let ETag = xhr.getResponseHeader("ETag");
+                    resolve({ data, ETag });
+                },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
+    static GetAccount(userId) {
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + "/accounts/index/" + userId,
                 contentType: 'application/json',
                 type: 'GET',
                 headers: API.getBearerAuthorizationToken(),
@@ -241,3 +286,9 @@ class API {
         });
     }
 }
+
+
+
+////////////////////// Local storage management/////////////////////////////////////////////////
+
+
