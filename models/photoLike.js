@@ -7,8 +7,6 @@ export default class PhotoLike extends Model {
     {
         super();
         this.addField('UserId', 'string'); 
-        this.addField('PhotoId', 'string');        
-
-        this.setKey("PhotoId");
+        this.addField('PhotoId', 'string');
     }
 }

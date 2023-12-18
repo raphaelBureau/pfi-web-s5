@@ -127,7 +127,7 @@ function UpdateHeader(viewTitle, viewName) {
     currentViewName = viewName;
     $("#header").empty();
     $("#header").append(`
-        <span title="Liste des photos" id="listPhotosCmd"><img src="PhotosManager/images/PhotoCloudLogo.png" class="appLogo"></span>
+        <span title="Liste des photos" id="listPhotosCmd"><img src="./images/PhotoCloudLogo.png" class="appLogo"></span>
         <span class="viewTitle">${viewTitle} 
             <div class="cmdIcon fa fa-plus" id="newPhotoCmd" title="Ajouter une photo"></div>
         </span>
@@ -358,67 +358,136 @@ async function renderPhotosList() {
     let loggedUser = API.retrieveLoggedUser();
     eraseContent();
     //$("#content").append("<h2> En contruction </h2>");
-    if(loggedUser) {
+    if (loggedUser) {
         let photoList = await API.GetPhotos();
         let likeList = await API.GetPhotoLikes();
         console.log(loggedUser);
         console.log(photoList);
         console.log(likeList);
-        if(API.error) {
-           renderError("erreur d'affichage des photos");
+        if (API.error) {
+            renderError("erreur d'affichage des photos");
         }
-        else{
+        else {
             $("#content").append("<div class='photosLayout' id='photosLayout'>");
             photoList.data.forEach((photo) => {
+                if (photo.Shared || loggedUser.isAdmin || loggedUser.Id == photo.OwnerId) {
+                    console.log(photo);
                 let totalLikes = 0;
                 let UserLiked = false;
+                let likeId = "";
                 likeList.forEach(like => {
-                    if(like.PhotoId == photo.Id) {
-                    totalLikes++;
-                    if(like.UserId == loggedUser.Id) {
-                        UserLiked = true;
+                    if (like.PhotoId == photo.Id) {
+                        totalLikes++;
+                        if (like.UserId == loggedUser.Id) {
+                            UserLiked = true;
+                            likeId = like.Id;
+                        }
                     }
-                }
                 });
                 //let user = API.GetAccount(photo.OwnerId);
                 $("#photosLayout").append(`
                 <div class="photoLayoutNoScrollSnap">
-                <div class="photoTitleContainer">
-                <span class="photoTitle">${photo.Title}</span>
-                </div>
-                <div class="photoImage detailPhotoCmd" style="background-image:url('${photo.Image}')" photoId="${photo.Id}">
-                <div class="UserAvatarSmall" style="background-image:url('${photo.Avatar}')" title="${photo.OwnerName}"></div>
+                    <div class="photoTitleContainer">
+                    <span class="photoTitle">${photo.Title}</span>
+                        ${loggedUser.Id == photo.OwnerId ? `<div class="fa fa-pencil" onclick="renderModifyPhoto('${photo.Id}')"></div><div class="fa-solid fa-trash" onclick="renderDeletePhoto('${photo.Id}')"></div>` : ""}
+                        
+                    </div>
+                <div class="photoImage detailPhotoCmd" style="background-image:url('${photo.Image}')" photoId="${photo.Id}" onclick="renderPhoto('${photo.Id}')">
+                    <div class="UserAvatarSmall" style="background-image:url('${photo.Avatar}')" title="${photo.OwnerName}"></div>
+                    ${photo.Shared ? '<img class="UserAvatarSmall" src="./images/shared.png" title="Partagé">' : ""}
                 </div>
 
                 <div class="photoCreationDate">
-                <span>${convertToFrenchDate(photo.Date)}</span>
-                <span class="likesSummary">
-                <span>${totalLikes}</span>
-                <div class="${UserLiked? "fa fa-thumbs-up": "fa-regular fa-thumbs-up"}" id="ToggleLikeCmd"></div>
-            </span>
-        </div> 
-    </div>   
+                    <span>${convertToFrenchDate(photo.Date)}</span>
+                    <span class="likesSummary">
+                        <span>${totalLikes}</span>
+                        <div onclick="LikePhoto('${photo.Id}', '${UserLiked}', '${likeId}')" class="${UserLiked ? "fa fa-thumbs-up" : "fa-regular fa-thumbs-up"} ToggleLikeCmd"></div>
+                    </span>
+                </div> 
+                </div>   
                 `);
+                }
+                
             });
         }
     }
-    $("#ToggleLikeCmd").on('click', (e) => {
-        
-    });
 }
-async function renderPhoto() { //render single photo with info text, fa-regular fa-thumb-up when user hasnt liked photo, fa fa-thumb-up when liked
+function LikePhoto(photoId, IsLiked, likeId = "") {
+    if (IsLiked == "true") {
+        API.DeleteLike(likeId);
+    } else if (IsLiked == "false") {
+        console.log("liked");
+        API.LikePhoto({ PhotoId: photoId, UserId: API.retrieveLoggedUser().Id });
+    }
+    renderPhotos();
+}
+async function renderPhoto(photoId) { //render single photo with info text, fa-regular fa-thumb-up when user hasnt liked photo, fa fa-thumb-up when liked
     let loggedUser = API.retrieveLoggedUser();
     timeout();
     showWaitingGif();
-    UpdateHeader('Liste des photos', 'photosList')
+    
+    if (loggedUser && photoId != "") {
+        let photo = await API.GetPhotosById(photoId);
+        let likeList = await API.GetPhotoLikes();
+        eraseContent();
+        let UserLiked = false;
+        let totalLikes = 0;
+        let likeId = "";
+        likeList.forEach(like => {
+            if (like.PhotoId == photo.Id) {
+                totalLikes++;
+                if (like.UserId == loggedUser.Id) {
+                    UserLiked = true;
+                    likeId = like.Id;
+                }
+            }
+        });
+        UpdateHeader('Détails', 'photosList');
+        $("#content").append(`
+            <div class="content">
+                <div class="UserLayout">
+                    <div class="UserAvatar" style="background-image:url('${photo.Avatar}')"></div>
+                    <div class="UserInfo">
+                        <span class="UserName">${photo.OwnerName}</span>
+                    </div>
+                </div>
+                <hr>
+
+                <div class="PhotoDetailsContainer">
+                    <div class="photoDetailsTitle">${photo.Title}</div>
+                    <div class="photoDetailsLargeImage">
+                    <img src="${photo.Image}" alt="${photo.Title}" style="width: 100%;">
+                </div>
+                <div class="photoDetailsCreationDate">
+                    <div class="photoCreationDate">${convertToFrenchDate(photo.Date)}</div>
+                    <div class="likesSummary">
+                    <span class="likeCount">${totalLikes}</span>
+                    <div onclick="LikePhotoDetail('${photo.Id}', '${UserLiked}', '${likeId}')" class="${UserLiked ? "fa fa-thumbs-up" : "fa-regular fa-thumbs-up"} ToggleLikeCmd"></div>
+                    </div>
+                </div>
+                <div class="photoDetailsDescription">${photo.Description}</div>
+                </div>
+            </div>
+        `);
+        restoreContentScrollPosition();
+    }
 }
-async function renderCreatePhoto() { 
+function LikePhotoDetail(photoId, IsLiked, likeId = "") {
+    saveContentScrollPosition();
+    if (IsLiked == "true") {
+        API.DeleteLike(likeId);
+    } else if (IsLiked == "false") {
+        console.log("liked");
+        API.LikePhoto({ PhotoId: photoId, UserId: API.retrieveLoggedUser().Id });
+    }
+    renderPhoto(photoId);
+}
+async function renderCreatePhoto() {
     let loggedUser = API.retrieveLoggedUser();
     timeout();
-    showWaitingGif();
-    if(loggedUser) {
-    UpdateHeader('Ajout de photos', 'photosList')
-    $("#content").append(` <br/>
+    if (loggedUser) {
+        UpdateHeader('Ajout de photos', 'photosList')
+        $("#content").append(` <br/>
     <form class="form" id="createPhotoForm"'>
         <fieldset>
             <legend>Informations</legend>
@@ -460,43 +529,152 @@ async function renderCreatePhoto() {
     <div class="cancel">
         <button class="form-control btn-secondary" id="abortCreatePhotoCmd">Annuler</button>
     </div>`);
-    //js
-    $('#createPhotoForm').on('submit', (e) => {
-        let loggedUser = API.retrieveLoggedUser();
-        let photoData = getFormData($('#createPhotoForm'));
-        let photo = {'OwnerId':loggedUser.Id,
-        'Title':photoData.Title,
-        'Description':photoData.Description,
-        'Image':photoData.Image,
-        'Date':Date.now(),
-        'Shared':photoData.Share == "on",
-        'OwnerName':loggedUser.Name,
-        'Avatar':loggedUser.Avatar}
+        //js
+        $('#createPhotoForm').on('submit', async (e) => {
+            let loggedUser = API.retrieveLoggedUser();
+            let photoData = getFormData($('#createPhotoForm'));
+            let photo = {
+                'OwnerId': loggedUser.Id,
+                'Title': photoData.Title,
+                'Description': photoData.Description,
+                'Image': photoData.Image,
+                'Date': Date.now(),
+                'Shared': photoData.Share == "on",
+                'OwnerName': loggedUser.Name,
+                'Avatar': loggedUser.Avatar
+            }
 
-        console.log(photo);
-        e.preventDefault();
-        showWaitingGif();
-        API.CreatePhoto(photo);
-    });
-    $('#abortCreatePhotoCmd').on('click', renderPhotos);
-    initFormValidation(); // important to do after all html injection!
-    initImageUploaders();
-    
-    }else{
+            console.log(photo);
+            e.preventDefault();
+            showWaitingGif();
+            await API.CreatePhoto(photo);
+            renderPhotos();
+        });
+        $('#abortCreatePhotoCmd').on('click', renderPhotos);
+        initFormValidation(); // important to do after all html injection!
+        initImageUploaders();
+
+    } else {
         renderError("vous avez besoin d'etre connecté pour publier des photos");
     }
 }
-async function renderModifyPhoto() { 
+async function renderModifyPhoto(photoId = "") {
     let loggedUser = API.retrieveLoggedUser();
     timeout();
     showWaitingGif();
-    UpdateHeader('Modification de photo', 'photosList')
+    if (loggedUser && photoId != "") {
+        let photo = await API.GetPhotosById(photoId);
+        eraseContent();
+        UpdateHeader('Modification de photo', 'photosList');
+        $("#content").append(` <br/>
+    <form class="form" id="createPhotoForm"'>
+        <fieldset>
+            <legend>Informations</legend>
+            <input  type="text" 
+                    value="${photo.Title}"
+                    class="form-control Alpha" 
+                    name="Title" 
+                    id="Title"
+                    placeholder="Titre" 
+                    required 
+                    RequireMessage = 'Veuillez entrer un titre'
+                    InvalidMessage = 'Titre invalide'
+                    />
+
+            <textarea class="form-control Alpha" 
+                    name="Description" 
+                    id="Description" 
+                    placeholder="Description" 
+                    required
+                    RequireMessage = 'Veuillez entrer une description'
+                    InvalidMessage="La description est invalide">${photo.Description}</textarea>
+
+                    <input type="checkbox" ${photo.Shared ? "checked" : "" }
+                    name="Share"
+                    id="Share">
+             <label for="Share">Partagée</label>
+        </fieldset>
+        <fieldset>
+            <legend>Image</legend>
+            <div class='imageUploader' 
+                    newImage='true' 
+                    controlId='Image' 
+                    imageSrc='${photo.Image}' 
+                    waitingImage="images/Loading_icon.gif">
+        </div>
+        </fieldset>
+
+        <input type='submit' name='submit' id='savePhoto' value="Enregistrer" class="form-control btn-primary">
+    </form>
+    <div class="cancel">
+        <button class="form-control btn-secondary" id="abortCreatePhotoCmd">Annuler</button>
+    </div>`);
+        //js
+        $('#createPhotoForm').on('submit', async (e) => {
+            let loggedUser = API.retrieveLoggedUser();
+            let photoData = getFormData($('#createPhotoForm'));
+            let photo = {
+                'OwnerId': loggedUser.Id,
+                'Title': photoData.Title,
+                'Description': photoData.Description,
+                'Image': photoData.Image,
+                'Date': Date.now(),
+                'Shared': photoData.Share == "on",
+                'OwnerName': loggedUser.Name,
+                'Avatar': loggedUser.Avatar,
+                'Id' : photoId
+            }
+
+            console.log(photo);
+            e.preventDefault();
+            showWaitingGif();
+            await API.UpdatePhoto(photo);
+            renderPhotos();
+        });
+        $('#abortCreatePhotoCmd').on('click', renderPhotos);
+        initFormValidation(); // important to do after all html injection!
+        initImageUploaders();
+
+    } else {
+        renderError("vous avez besoin d'etre connecté pour publier des photos");
+    }
 }
-async function renderDeletePhoto() { 
+async function renderDeletePhoto(photoId = "") {
     let loggedUser = API.retrieveLoggedUser();
     timeout();
     showWaitingGif();
-    UpdateHeader('Retrait de photo', 'photosList')
+    if (loggedUser && photoId != "") {
+        let photo = await API.GetPhotosById(photoId);
+        eraseContent();
+        UpdateHeader('Retrait de photo', 'photosList')
+    $("#content").append(`
+        <div class="content loginForm">
+            <br>
+            <div class="form UserRow ">
+                <h4> Voulez-vous vraiment effacer cette photo? </h4>
+                <div class="UserContainer noselect">
+                    <div class="photoLayout">
+                    <div class="photoTitleContainer">
+                            <span class="photoTitle">${photo.Title}</span>
+                    </div>
+                        <div class="photoImage" style="background-image:url('${photo.Image}')"></div>
+                        
+                    </div>
+                </div>
+            </div>           
+            <div class="form">
+                <button class="form-control btn-danger" onclick="deletePhoto('${photoId}')">Effacer</button>
+                <br>
+                <button class="form-control btn-secondary" onclick="renderPhotos()">Annuler</button>
+            </div>
+        </div>
+    `);
+    }
+}
+async function deletePhoto(photoId) {
+    showWaitingGif();
+    await API.DeletePhoto(photoId);
+    renderPhotos();
 }
 function renderVerify() {
     eraseContent();
