@@ -360,35 +360,51 @@ async function renderPhotosList() {
     //$("#content").append("<h2> En contruction </h2>");
     if(loggedUser) {
         let photoList = await API.GetPhotos();
+        let likeList = await API.GetPhotoLikes();
+        console.log(loggedUser);
+        console.log(photoList);
+        console.log(likeList);
         if(API.error) {
            renderError("erreur d'affichage des photos");
         }
         else{
             $("#content").append("<div class='photosLayout' id='photosLayout'>");
             photoList.data.forEach((photo) => {
-                let user = API.GetAccount(photo.OwnerId);
+                let totalLikes = 0;
+                let UserLiked = false;
+                likeList.forEach(like => {
+                    if(like.PhotoId == photo.Id) {
+                    totalLikes++;
+                    if(like.UserId == loggedUser.Id) {
+                        UserLiked = true;
+                    }
+                }
+                });
+                //let user = API.GetAccount(photo.OwnerId);
                 $("#photosLayout").append(`
                 <div class="photoLayoutNoScrollSnap">
                 <div class="photoTitleContainer">
                 <span class="photoTitle">${photo.Title}</span>
                 </div>
                 <div class="photoImage detailPhotoCmd" style="background-image:url('${photo.Image}')" photoId="${photo.Id}">
-                <div class="UserAvatarSmall" style="background-image:url('${user.Avatar}')" title="${user.Name}"></div>
+                <div class="UserAvatarSmall" style="background-image:url('${photo.Avatar}')" title="${photo.OwnerName}"></div>
                 </div>
 
                 <div class="photoCreationDate">
                 <span>${convertToFrenchDate(photo.Date)}</span>
                 <span class="likesSummary">
-                <span>5</span>
-                <span class=""></span>
+                <span>${totalLikes}</span>
+                <div class="${UserLiked? "fa fa-thumbs-up": "fa-regular fa-thumbs-up"}" id="ToggleLikeCmd"></div>
             </span>
         </div> 
     </div>   
                 `);
             });
-            console.log(photoList);
         }
     }
+    $("#ToggleLikeCmd").on('click', (e) => {
+        
+    });
 }
 async function renderPhoto() { //render single photo with info text, fa-regular fa-thumb-up when user hasnt liked photo, fa fa-thumb-up when liked
     let loggedUser = API.retrieveLoggedUser();
@@ -453,7 +469,9 @@ async function renderCreatePhoto() {
         'Description':photoData.Description,
         'Image':photoData.Image,
         'Date':Date.now(),
-        'Shared':photoData.Share == "on"}
+        'Shared':photoData.Share == "on",
+        'OwnerName':loggedUser.Name,
+        'Avatar':loggedUser.Avatar}
 
         console.log(photo);
         e.preventDefault();

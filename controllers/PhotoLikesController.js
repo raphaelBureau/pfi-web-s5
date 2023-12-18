@@ -5,6 +5,9 @@ import Controller from './Controller.js';
 
 export default class PhotoLikes extends Controller {
     constructor(HttpContext) {
-        super(HttpContext, new Repository(new PhotoLikeModel()), Authorizations.user());
+        super(HttpContext, new Repository(new PhotoLikeModel()), Authorizations.user()); //get returns array of userids that liked
+        //post addLike
+        //delete removeLike
+        //this.photoLikesRepository = new Repository(new PhotoLikeModel());
     }
 }

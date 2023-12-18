@@ -230,6 +230,18 @@ class API {
             });
         });
     }
+    static GetPhotoLikes(id) { //returns array with userIds that liked image
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + photoLikes_API,
+                type: 'GET',
+                headers: API.getBearerAuthorizationToken(),
+                success: data => { resolve(data); },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
     static GetPhotos(queryString = null) {
         let url = serverHost + photos_API + (queryString ? queryString : "");
         return new Promise(resolve => {
@@ -259,6 +271,20 @@ class API {
             });
         });
     }
+    static LikePhoto(data) {
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + photoLikes_API,
+                type: 'POST',
+                headers: API.getBearerAuthorizationToken(),
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: data => { resolve(data) },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
     static UpdatePhoto(data) {
         API.initHttpState();
         return new Promise(resolve => {
@@ -278,6 +304,18 @@ class API {
         return new Promise(resolve => {
             $.ajax({
                 url: serverHost + photos_API + "/" + id,
+                type: 'DELETE',
+                headers: API.getBearerAuthorizationToken(),
+                success: () => { resolve(true) },
+                error: xhr => { API.setHttpErrorState(xhr); resolve(false); }
+            });
+        });
+    }
+    static DeleteLike(id) {
+        API.initHttpState();
+        return new Promise(resolve => {
+            $.ajax({
+                url: serverHost + photoLikes_API + "/" + id,
                 type: 'DELETE',
                 headers: API.getBearerAuthorizationToken(),
                 success: () => { resolve(true) },

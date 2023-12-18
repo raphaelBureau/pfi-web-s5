@@ -8,6 +8,8 @@ export default class Photo extends Model {
     {
         super();
         this.addField('OwnerId', 'string');
+        this.addField('OwnerName', 'string');
+        this.addField('Avatar', 'string');
         this.addField('Title', 'string');        
         this.addField('Description', 'string');
         this.addField('Image', 'asset');
@@ -19,10 +21,10 @@ export default class Photo extends Model {
 
     bindExtraData(instance) {
         instance = super.bindExtraData(instance);
-        let usersRepository = new Repository(new UserModel());
-        instance.Owner = usersRepository.get(instance.OwnerId);
-        console.log(instance);
-        instance.OwnerName = instance.Owner.Name;
+       // let usersRepository = new Repository(new UserModel());
+       // instance.Owner = usersRepository.get(instance.OwnerId);
+       // console.log(instance);
+       // instance.OwnerName = instance.Owner.Name;
         return instance;
     }
 }
