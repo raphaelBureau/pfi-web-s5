@@ -11,13 +11,4 @@ export default class PhotoLike extends Model {
 
         this.setKey("PhotoId");
     }
-
-    bindExtraData(instance) {
-        instance = super.bindExtraData(instance);
-        let usersRepository = new Repository(new UserModel());
-        let owner = usersRepository.get(instance.OwnerId);
-        instance.OwnerName = owner.Name;
-        instance.OwnerAvatar = owner.Avatar;
-        return instance;
-    }
 }

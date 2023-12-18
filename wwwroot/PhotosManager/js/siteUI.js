@@ -346,8 +346,10 @@ async function renderPhotos() {
     $("#newPhotoCmd").show();
     $("#abort").hide();
     let loggedUser = API.retrieveLoggedUser();
-    if (loggedUser)
+    if (loggedUser) {
         renderPhotosList();
+        $('#newPhotoCmd').on('click', renderCreatePhoto);
+    }
     else {
         renderLoginForm();
     }
@@ -355,7 +357,38 @@ async function renderPhotos() {
 async function renderPhotosList() {
     let loggedUser = API.retrieveLoggedUser();
     eraseContent();
-    $("#content").append("<h2> En contruction </h2>");
+    //$("#content").append("<h2> En contruction </h2>");
+    if(loggedUser) {
+        let photoList = await API.GetPhotos();
+        if(API.error) {
+           renderError("erreur d'affichage des photos");
+        }
+        else{
+            $("#content").append("<div class='photosLayout' id='photosLayout'>");
+            photoList.data.forEach((photo) => {
+                let user = API.GetAccount(photo.OwnerId);
+                $("#photosLayout").append(`
+                <div class="photoLayoutNoScrollSnap">
+                <div class="photoTitleContainer">
+                <span class="photoTitle">${photo.Title}</span>
+                </div>
+                <div class="photoImage detailPhotoCmd" style="background-image:url('${photo.Image}')" photoId="${photo.Id}">
+                <div class="UserAvatarSmall" style="background-image:url('${user.Avatar}')" title="${user.Name}"></div>
+                </div>
+
+                <div class="photoCreationDate">
+                <span>${convertToFrenchDate(photo.Date)}</span>
+                <span class="likesSummary">
+                <span>5</span>
+                <span class=""></span>
+            </span>
+        </div> 
+    </div>   
+                `);
+            });
+            console.log(photoList);
+        }
+    }
 }
 async function renderPhoto() { //render single photo with info text, fa-regular fa-thumb-up when user hasnt liked photo, fa fa-thumb-up when liked
     let loggedUser = API.retrieveLoggedUser();
@@ -367,7 +400,73 @@ async function renderCreatePhoto() {
     let loggedUser = API.retrieveLoggedUser();
     timeout();
     showWaitingGif();
+    if(loggedUser) {
     UpdateHeader('Ajout de photos', 'photosList')
+    $("#content").append(` <br/>
+    <form class="form" id="createPhotoForm"'>
+        <fieldset>
+            <legend>Informations</legend>
+            <input  type="text" 
+                    class="form-control Alpha" 
+                    name="Title" 
+                    id="Title"
+                    placeholder="Titre" 
+                    required 
+                    RequireMessage = 'Veuillez entrer un titre'
+                    InvalidMessage = 'Titre invalide'
+                    />
+
+            <textarea class="form-control Alpha" 
+                    name="Description" 
+                    id="Description" 
+                    placeholder="Description" 
+                    required
+                    RequireMessage = 'Veuillez entrer une description'
+                    InvalidMessage="La description est invalide"></textarea>
+
+                    <input type="checkbox"
+                    name="Share"
+                    id="Share">
+             <label for="Share">Partagée</label>
+        </fieldset>
+        <fieldset>
+            <legend>Image</legend>
+            <div class='imageUploader' 
+                    newImage='true' 
+                    controlId='Image' 
+                    imageSrc='images/no-avatar.png' 
+                    waitingImage="images/Loading_icon.gif">
+        </div>
+        </fieldset>
+
+        <input type='submit' name='submit' id='savePhoto' value="Enregistrer" class="form-control btn-primary">
+    </form>
+    <div class="cancel">
+        <button class="form-control btn-secondary" id="abortCreatePhotoCmd">Annuler</button>
+    </div>`);
+    //js
+    $('#createPhotoForm').on('submit', (e) => {
+        let loggedUser = API.retrieveLoggedUser();
+        let photoData = getFormData($('#createPhotoForm'));
+        let photo = {'OwnerId':loggedUser.Id,
+        'Title':photoData.Title,
+        'Description':photoData.Description,
+        'Image':photoData.Image,
+        'Date':Date.now(),
+        'Shared':photoData.Share == "on"}
+
+        console.log(photo);
+        e.preventDefault();
+        showWaitingGif();
+        API.CreatePhoto(photo);
+    });
+    $('#abortCreatePhotoCmd').on('click', renderPhotos);
+    initFormValidation(); // important to do after all html injection!
+    initImageUploaders();
+    
+    }else{
+        renderError("vous avez besoin d'etre connecté pour publier des photos");
+    }
 }
 async function renderModifyPhoto() { 
     let loggedUser = API.retrieveLoggedUser();
